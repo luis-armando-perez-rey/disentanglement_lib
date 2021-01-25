@@ -140,6 +140,66 @@ def fc_encoder(input_tensor, num_latent, is_training=True):
   log_var = tf.layers.dense(e2, num_latent, activation=None)
   return means, log_var
 
+@gin.configurable("vgg_encoder", whitelist=[])
+def vgg_encoder(input_tensor, num_latent, is_training=True):
+  """VGG encoder.
+
+  Based on row 3 of Table 1 on page 13 of "beta-VAE: Learning Basic Visual
+  Concepts with a Constrained Variational Framework"
+  (https://openreview.net/forum?id=Sy2fzU9gl)
+
+  Args:
+    input_tensor: Input tensor of shape (batch_size, 64, 64, num_channels) to
+      build encoder on.
+    num_latent: Number of latent variables to output.
+    is_training: Whether or not the graph is built for training (UNUSED).
+
+  Returns:
+    means: Output tensor of shape (batch_size, num_latent) with latent variable
+      means.
+    log_var: Output tensor of shape (batch_size, num_latent) with latent
+      variable log variances.
+  """
+  del is_training
+
+  e1 = tf.layers.conv2d(
+      inputs=input_tensor,
+      filters=64,
+      kernel_size=3,
+      strides=1,
+      activation=tf.nn.relu,
+      padding="same",
+      name="e1",
+  )
+  p1 = tf.keras.layers.MaxPool2D(name="p1", padding="same")(e1)
+  e2 = tf.layers.conv2d(
+      inputs=p1,
+      filters=64,
+      kernel_size=3,
+      strides=1,
+      activation=tf.nn.relu,
+      padding="same",
+      name="e2",
+  )
+  p2 = tf.keras.layers.MaxPool2D(name="p2", padding="same")(e2)
+  e3 = tf.layers.conv2d(
+      inputs=p2,
+      filters=64,
+      kernel_size=3,
+      strides=1,
+      activation=tf.nn.relu,
+      padding="same",
+      name="e3",
+  )
+  p3 = tf.keras.layers.MaxPool2D(name="p3", padding="same")(e3)
+
+  flat1 = tf.layers.flatten(p3)
+  f1 = tf.layers.dense(flat1, 64, activation=tf.nn.relu, name="e5")
+  means = tf.layers.dense(f1, num_latent, activation=None, name="means")
+  log_var = tf.layers.dense(f1, num_latent, activation=None, name="log_var")
+  return means, log_var
+
+
 
 @gin.configurable("conv_encoder", whitelist=[])
 def conv_encoder(input_tensor, num_latent, is_training=True):
@@ -229,6 +289,77 @@ def fc_decoder(latent_tensor, output_shape, is_training=True):
   d3 = tf.layers.dense(d2, 1200, activation=tf.nn.tanh)
   d4 = tf.layers.dense(d3, np.prod(output_shape))
   return tf.reshape(d4, shape=[-1] + output_shape)
+
+@gin.configurable("vgg_decoder", whitelist=[])
+def vgg_decoder(latent_tensor, output_shape, is_training=True):
+  """VGG decoder
+
+  Based on row 3 of Table 1 on page 13 of "beta-VAE: Learning Basic Visual
+  Concepts with a Constrained Variational Framework"
+  (https://openreview.net/forum?id=Sy2fzU9gl)
+
+  Args:
+    latent_tensor: Input tensor of shape (batch_size,) to connect decoder to.
+    output_shape: Shape of the data.
+    is_training: Whether or not the graph is built for training (UNUSED).
+
+  Returns:
+    Output tensor of shape (batch_size, 64, 64, num_channels) with the [0,1]
+      pixel intensities.
+  """
+  del is_training
+  image_height = 64//8
+  image_width = 64//8
+  filters = 64
+  d1 = tf.layers.dense(latent_tensor, 64, activation=tf.nn.relu)
+  d2 = tf.layers.dense(d1, image_height * image_width * filters, activation=tf.nn.relu)
+  d2_reshaped = tf.reshape(d2, shape=[-1, image_height, image_width, filters])
+
+  u1 = tf.keras.layers.UpSampling2D(
+      size=(2, 2),
+      name="u1"
+  )(d2_reshaped)
+
+  c1 = tf.layers.conv2d(
+      inputs=u1,
+      filters=64,
+      kernel_size=3,
+      strides=1,
+      activation=tf.nn.relu,
+      padding="same",
+      name="c1",
+  )
+  u2 = tf.keras.layers.UpSampling2D(
+      size=(2, 2),
+      name="u2"
+  )(c1)
+
+  c2 = tf.layers.conv2d(
+      inputs=u2,
+      filters=64,
+      kernel_size=3,
+      strides=1,
+      activation=tf.nn.relu,
+      padding="same",
+      name="c2",
+  )
+
+  u3 = tf.keras.layers.UpSampling2D(
+      size=(2, 2),
+      name="u3"
+  )(c2)
+
+  c3 = tf.layers.conv2d(
+      inputs=u3,
+      filters=output_shape[2],
+      kernel_size=3,
+      strides=1,
+      activation=tf.nn.sigmoid,
+      padding="same",
+      name="c3",
+  )
+
+  return tf.reshape(c3, [-1] + output_shape)
 
 
 @gin.configurable("deconv_decoder", whitelist=[])

@@ -25,6 +25,48 @@ from disentanglement_lib.data.ground_truth import norb
 from disentanglement_lib.data.ground_truth import shapes3d
 import gin.tf
 
+# Add our project imports
+import os
+import sys
+CWD = os.getcwd()
+DISENTANGLEMENT_LIB_PATH = os.path.dirname(os.path.dirname(CWD))
+PROJECT_PATH = "/home/luis/disentangling_everything"
+# PROJECT_PATH = os.path.join(os.path.dirname(DISENTANGLEMENT_LIB_PATH), "disentangling_everything")
+sys.path.append(PROJECT_PATH)
+
+from data.disentanglement_lib_gtd import DisLibGroundTruthData
+
+ARROW_PARAMS = {
+    "data": "arrow",
+    "arrow_size": 64,
+    "n_hues": 64,
+    "n_rotations": 64,
+}
+
+WRAPPED_PIXEL4_PARAMS = {
+    "data": "pixel",
+    "height": 64,
+    "width": 64,
+    "step_size_vert": 1,
+    "step_size_hor": 1,
+    "square_size": 4
+}
+
+WRAPPED_PIXEL8_PARAMS = {
+    "data": "pixel",
+    "height": 64,
+    "width": 64,
+    "step_size_vert": 1,
+    "step_size_hor": 1,
+    "square_size": 4
+}
+
+MODELNET_PARAMS = {
+    "dataset_filename": "modelnet_color_single_64_64.h5",
+    "data": "modelnet_colors"
+}
+
+
 
 @gin.configurable("dataset")
 def get_named_ground_truth_data(name):
@@ -61,5 +103,13 @@ def get_named_ground_truth_data(name):
     return shapes3d.Shapes3D()
   elif name == "dummy_data":
     return dummy_data.DummyData()
+  elif name == "modelnet":
+    return DisLibGroundTruthData(**MODELNET_PARAMS)
+  elif name == "arrow":
+    return DisLibGroundTruthData(**ARROW_PARAMS)
+  elif name == "pixel4":
+    return DisLibGroundTruthData(**WRAPPED_PIXEL4_PARAMS)
+  elif name == "pixel8":
+    return DisLibGroundTruthData(**WRAPPED_PIXEL8_PARAMS)
   else:
     raise ValueError("Invalid data set name.")
