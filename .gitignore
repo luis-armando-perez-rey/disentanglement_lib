@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Pycharm ignore (when doing the project in that IDE)
+# User-specific stuff
+.idea/
+
+# Data
+data/cars/
+data/dsprites/
+data/mpi3d_toy/
+data/sim_toy_ordered/sim_toy_64x_ordered/
+data/sim_toy_ordered/sim_toy_np_ordered.npz
+data/sim_toy_ordered/sim_toy_ordered.tar.gz
+data/small_norb/
+data/resources.zip
+*.h5
+
+# Results
+results/
+*.h5
+
+# slurm outputs
+*.out
+
+# slurm run scripts
+# experiments/run_*
+experiments/neptune_config.py
